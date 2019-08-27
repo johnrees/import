@@ -3,9 +3,6 @@ const axios = require("axios");
 const { v4 } = require("uuid");
 const rimraf = require("rimraf");
 const cors = require("cors");
-const compression = require("compression");
-app.use(cors());
-app.use(compression());
 
 const authority = "osl";
 
@@ -322,6 +319,7 @@ async function three() {
 
 const express = require("express");
 const app = express();
+app.use(cors());
 
 const port = 3000;
 
