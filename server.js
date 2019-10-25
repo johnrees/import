@@ -327,6 +327,14 @@ app.use(cors());
 
 const port = 3000;
 
+app.get("/", async (req, res) => {
+  const team = "southwark";
+  await one(team);
+  await two(team);
+  const ob = await three(team);
+  res.json(ob);
+});
+
 app.get("/:cacheBuster/:team", async (req, res) => {
   const { team } = req.params;
   await one(team);
