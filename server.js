@@ -4,91 +4,94 @@ const { v4 } = require("uuid");
 const rimraf = require("rimraf");
 const cors = require("cors");
 
-const authority = "osl";
+const ids = {
+  lambeth: "9ef6746e-1525-44d5-9622-a9759a4f971a",
+  southwark: "4733c885-454c-452b-8803-0a7237b43b3a",
+  wycombe: "2ca357cc-1b4a-47a2-942b-fa1aa5002c9b"
+};
 
-async function one() {
-  rimraf.sync("in");
-  rimraf.sync("out");
+// const authority = "southwark";
 
-  const ids = {
-    // wycombe: "a15f27be-f63e-411a-8583-3b7170dee4ba"
-    osl: "4733c885-454c-452b-8803-0a7237b43b3a"
-  };
+async function one(authority) {
+  rimraf.sync(`in/${authority}`);
+  rimraf.sync(`out/${authority}`);
 
   try {
     await fs.mkdir("in");
   } catch (e) {}
 
-  let ids2 = Object.entries(ids);
+  // let ids2 = Object.entries(ids);
+  // let ids2 = [ids[authority]];
 
-  for (let id2 of ids2) {
-    const [la, id] = id2;
+  // let id2 = ids[authority]
 
-    let arr = [id];
-    const visited = new Set();
+  // for (let id2 of ids2) {
+  const [la, id] = [authority, ids[authority]];
 
-    const parse = (nodes = [], arr = []) => {
-      nodes.forEach(n => {
-        if (n.t === "Portal") arr.push(n.d.flowId);
-        parse(n.c, arr);
-      });
+  let arr = [id];
+  const visited = new Set();
 
-      return arr;
-    };
+  const parse = (nodes = [], arr = []) => {
+    nodes.forEach(n => {
+      if (n.t === "Portal") arr.push(n.d.flowId);
+      parse(n.c, arr);
+    });
 
-    const get = async id => {
-      if (!visited.has(id)) {
-        visited.add(id);
-        const url = `https://planx-backend.herokuapp.com/api/v1/flows/${id}`;
-        console.log(url);
+    return arr;
+  };
 
-        const { data } = await axios.get(url);
-        const ids = parse(data.data.c, arr);
+  const get = async id => {
+    if (id && !visited.has(id)) {
+      visited.add(id);
+      const url = `https://planx-backend.herokuapp.com/api/v1/flows/${id}`;
+      console.log(id);
 
-        await Promise.all(ids.map(get));
-      }
-    };
-
-    const main = async () => {
-      await get(arr[0]);
-      await fs.writeFile(
-        `in/${la}.json`,
-        JSON.stringify(Array.from(new Set(arr)).reverse(), null, 2)
-      );
-    };
-
-    await main();
-  }
-
-  return 1;
-}
-
-async function two() {
-  let files = await fs.readdir("in");
-  files = files.filter(f => f.endsWith(".json"));
-
-  for (let f of files) {
-    const file = await fs.readFile(`in/${f}`);
-    const ids = JSON.parse(file);
-    const la = f.split(".")[0];
-    const dir = `in/${la}`;
-
-    try {
-      await fs.mkdir(dir);
-    } catch (e) {}
-
-    for (let id of ids) {
-      const url = `https://planx-backend.herokuapp.com/api/v1/flows/${id}.json`;
       const { data } = await axios.get(url);
+      const ids = parse(data.data.c, arr);
 
-      await fs.writeFile(`${dir}/${id}.json`, JSON.stringify(data));
+      await Promise.all(ids.map(get));
     }
-  }
+  };
+
+  const main = async () => {
+    await get(arr[0]);
+    await fs.writeFile(
+      `in/${la}.json`,
+      JSON.stringify(Array.from(new Set(arr)).reverse(), null, 2)
+    );
+  };
+
+  await main();
+  // }
 
   return 1;
 }
 
-async function three() {
+async function two(authority) {
+  // let files = await fs.readdir("in");
+  // files = files.filter(f => f.endsWith(".json"));
+
+  // for (let f of files) {
+  const file = await fs.readFile(`in/${authority}.json`);
+  const ids = JSON.parse(file);
+  const dir = `in/${authority}`;
+
+  try {
+    await fs.mkdir(dir);
+  } catch (e) {}
+
+  for (let id of ids) {
+    const url = `https://planx-backend.herokuapp.com/api/v1/flows/${id}.json`;
+    const { data } = await axios.get(url);
+
+    await fs.writeFile(`${dir}/${id}.json`, JSON.stringify(data));
+  }
+  // }
+
+  return 1;
+}
+
+async function three(authority) {
   /**
    * Fancy ID generator that creates 20-character string identifiers with the following properties:
    *
@@ -258,9 +261,10 @@ async function three() {
 
       try {
         await fs.mkdir("out");
+        await fs.mkdir(`out/${authority}`);
       } catch (e) {}
 
-      await fs.writeFile(`out/${id}.json`, JSON.stringify(parsed));
+      await fs.writeFile(`out/${authority}/${id}.json`, JSON.stringify(parsed));
 
       // await axios.post("http://localhost/flows", parsed);
     }
@@ -278,7 +282,7 @@ async function three() {
   const aIds = JSON.parse(fff).reverse();
 
   for (let id of aIds) {
-    const f1 = await fs.readFile(`out/${id}.json`);
+    const f1 = await fs.readFile(`out/${authority}/${id}.json`);
     const data = JSON.parse(f1);
     ob.nodes = { ...ob.nodes, ...data.nodes };
     data.edges.forEach(e => {
@@ -323,10 +327,11 @@ app.use(cors());
 
 const port = 3000;
 
-app.get("/", async (req, res) => {
-  await one();
-  await two();
-  const ob = await three();
+app.get("/:cacheBuster/:team", async (req, res) => {
+  const { team } = req.params;
+  await one(team);
+  await two(team);
+  const ob = await three(team);
   res.json(ob);
 });
 
