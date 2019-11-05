@@ -5,9 +5,9 @@ const rimraf = require("rimraf");
 const cors = require("cors");
 
 const ids = {
-  lambeth: "9ef6746e-1525-44d5-9622-a9759a4f971a",
-  southwark: "4733c885-454c-452b-8803-0a7237b43b3a",
-  wycombe: "2ca357cc-1b4a-47a2-942b-fa1aa5002c9b"
+  // lambeth: "9ef6746e-1525-44d5-9622-a9759a4f971a",
+  unboxed: "4733c885-454c-452b-8803-0a7237b43b3a"
+  // wycombe: "2ca357cc-1b4a-47a2-942b-fa1aa5002c9b"
 };
 
 // const authority = "southwark";
@@ -343,4 +343,13 @@ app.get("/:cacheBuster/:team", async (req, res) => {
   res.json(ob);
 });
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+async function go(team) {
+  await one(team);
+  await two(team);
+  const ob = await three(team);
+  await fs.writeFile(`${team}.json`, JSON.stringify(ob));
+}
+
+go("unboxed");
